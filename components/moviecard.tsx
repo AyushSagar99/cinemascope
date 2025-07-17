@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import Image from 'next/image';
-import { AppMovie } from '@/types';
+import React, { useEffect, useRef } from 'react';
+import type { AppMovie } from '@/types';
 import { useMovie } from '@/context/moviecontext';
 
 interface MovieCardProps {
@@ -11,12 +10,15 @@ interface MovieCardProps {
 
 export default function MovieCard({ movie }: MovieCardProps) {
   const { fetchMovieDetailsForMovie, fetchDynamicPrice } = useMovie();
+  const cardRef = useRef<HTMLDivElement>(null);
 
+  // Fetch details if not already present
   useEffect(() => {
     if (!movie.details) {
       fetchMovieDetailsForMovie(movie.imdbID);
     }
   }, [movie.imdbID, movie.details, fetchMovieDetailsForMovie]);
+
 
   useEffect(() => {
     if (movie.details && !movie.dynamicPrice) {
@@ -24,17 +26,43 @@ export default function MovieCard({ movie }: MovieCardProps) {
     }
   }, [movie.imdbID, movie.details, movie.dynamicPrice, fetchDynamicPrice]);
 
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    
+    const card = cardRef.current;
+    const rect = card.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    const mouseX = e.clientX - centerX;
+    const mouseY = e.clientY - centerY;
+    
+    const rotateX = (mouseY / (rect.height / 2)) * -10;
+    const rotateY = (mouseX / (rect.width / 2)) * 10;
+    
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.05)`;
+  };
+
+  const handleMouseLeave = () => {
+    if (!cardRef.current) return;
+    cardRef.current.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
+  };
+
   const posterSrc = movie.Poster && movie.Poster !== 'N/A' ? movie.Poster : 'https://placehold.co/300x450/cccccc/333333?text=No+Poster';
 
   return (
-    <div className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col h-full transform transition-transform duration-200 hover:scale-105">
+    <div 
+      ref={cardRef}
+      className="bg-white rounded-lg shadow-lg overflow-hidden flex flex-col h-full transition-transform duration-200 ease-out"
+      style={{ transformStyle: 'preserve-3d' }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
       <div className="relative w-full h-64 overflow-hidden">
-        <Image
-        priority
+        <img
           src={posterSrc}
           alt={movie.Title}
-          fill 
-          style={{ objectFit: 'cover' }} 
+          fill
+          style={{ objectFit: 'cover' }}
           className="rounded-t-lg"
           onError={(e) => {
             e.currentTarget.src = 'https://placehold.co/300x450/cccccc/333333?text=No+Poster';
@@ -73,6 +101,19 @@ export default function MovieCard({ movie }: MovieCardProps) {
             </>
           ) : (
             <p className="text-sm text-gray-500 italic">Calculating price...</p>
+          )}
+        </div>
+     
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          {typeof movie.moodMatchPercentage === 'number' && (
+            <p className="text-sm text-blue-700 font-semibold">
+              Mood Match: {movie.moodMatchPercentage}%
+            </p>
+          )}
+          {typeof movie.score === 'number' && (
+            <p className="text-sm text-purple-700 font-semibold">
+              Overall Score: {movie.score.toFixed(2)}
+            </p>
           )}
         </div>
       </div>

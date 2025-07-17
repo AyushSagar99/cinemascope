@@ -25,7 +25,7 @@ export default function SearchBar() {
         placeholder="Search for movies..."
         value={inputValue}
         onChange={handleChange}
-        className="w-full p-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-white shadow-sm"
+        className="w-full p-3 rounded-full border border-gray-300 focus:outline-none  focus:ring-blue-500 text-black shadow-sm"
       />
       {state.loading && <p className="text-center text-blue-500 mt-2">Searching...</p>}
       {state.error && <p className="text-center text-red-500 mt-2">{state.error}</p>}

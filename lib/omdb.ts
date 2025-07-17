@@ -5,9 +5,8 @@ const API_KEY = process.env.NEXT_PUBLIC_OMDB_API_KEY;
 const BASE_URL = `https://www.omdbapi.com/?apikey=${API_KEY}`;
 
 /**
- * Searches for movies by title.
- * @param query The search query.
- * @returns A promise that resolves to an OMDBSearchResponse or null if an error occurs.
+ * @param query 
+ * @returns 
  */
 export async function searchMovies(query: string): Promise<OMDBSearchResult[] | null> {
   if (!query) return null;
@@ -34,9 +33,8 @@ export async function searchMovies(query: string): Promise<OMDBSearchResult[] | 
 }
 
 /**
- * Fetches detailed information for a single movie by its IMDb ID.
- * @param imdbID The IMDb ID of the movie.
- * @returns A promise that resolves to OMDbMovieDetails or null if an error occurs.
+ * @param imdbID 
+ * @returns 
  */
 export async function getMovieDetails(imdbID: string): Promise<OMDbMovieDetails | null> {
   if (!imdbID) return null;

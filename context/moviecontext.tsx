@@ -1,17 +1,21 @@
-'use client'; 
 
-import React, { createContext, useReducer, useContext, ReactNode, useCallback, useEffect } from 'react';
-import { AppState, Action, SocialContext, OMDBSearchResult, OMDbMovieDetails, AppMovie, IDynamicPriceResponse, UserViewingHistory } from '@/types';
+'use client';
+
+import React, { createContext, useReducer, useContext, ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, Action, SocialContext, OMDBSearchResult, OMDbMovieDetails, AppMovie, IDynamicPriceResponse, UserViewingHistory, MoodType } from '@/types';
 import { searchMovies, getMovieDetails } from '@/lib/omdb';
 import { filterMoviesBySocialContext } from '@/utils/filter';
 import { debounce } from '@/utils/debounce';
+import { calculateFuzzyScore } from '@/utils/fuzzysearch';
+import { calculateOverallRecommendationScore, calculateMoodMatchScore } from '@/utils/engine';
 
 const initialState: AppState = {
   searchQuery: '',
   movies: [],
-  movieDetails: {}, 
+  movieDetails: {},
   filteredMovies: [],
   selectedSocialContext: 'Solo Night',
+  selectedMood: 'Feel Good Vibes',
   userViewingHistory: {
     watchedGenresLast30Days: ['Action', 'Comedy'],
     watchedMovieIds: ['tt0133093', 'tt0111161'],
@@ -28,7 +32,7 @@ const movieReducer = (state: AppState, action: Action): AppState => {
 
       const newMovieDetails = { ...state.movieDetails };
       action.payload.forEach(movie => {
-
+     
         if (!newMovieDetails[movie.imdbID]) {
           newMovieDetails[movie.imdbID] = undefined as any;
         }
@@ -46,23 +50,24 @@ const movieReducer = (state: AppState, action: Action): AppState => {
       return { ...state, filteredMovies: action.payload };
     case 'SET_SOCIAL_CONTEXT':
       return { ...state, selectedSocialContext: action.payload };
+    case 'SET_SELECTED_MOOD':
+      return { ...state, selectedMood: action.payload };
     case 'SET_LOADING':
       return { ...state, loading: action.payload };
     case 'SET_ERROR':
       return { ...state, error: action.payload };
     case 'SET_DYNAMIC_PRICE':
-     
       const updatedMovies = state.movies.map(movie =>
         movie.imdbID === action.payload.imdbID
           ? { ...movie, dynamicPrice: action.payload.price }
           : movie
       );
-      // After updating `movies`, the filtering useEffect will run and update `filteredMovies`
       return { ...state, movies: updatedMovies };
     default:
       return state;
   }
 };
+
 
 export const MovieContext = createContext<{
   state: AppState;
@@ -72,61 +77,80 @@ export const MovieContext = createContext<{
   fetchDynamicPrice: (imdbID: string, movieDetails: OMDbMovieDetails) => Promise<void>;
 } | undefined>(undefined);
 
+
 export const MovieProvider = ({ children }: { children: ReactNode }) => {
   const [state, dispatch] = useReducer(movieReducer, initialState);
+  
+
+  const fetchingDetailsRef = useRef<Set<string>>(new Set());
+  const fetchingPricesRef = useRef<Set<string>>(new Set());
+  
+
+  const [filteredAndScoredMovies, setFilteredAndScoredMovies] = useState<AppMovie[]>([]);
+
 
   const searchMoviesByQuery = useCallback(
     debounce(async (query: string) => {
-      if (!query) {
+      if (query.length < 3) {
         dispatch({ type: 'SET_MOVIES', payload: [] });
         dispatch({ type: 'SET_FILTERED_MOVIES', payload: [] });
+        dispatch({ type: 'SET_ERROR', payload: 'Please enter at least 3 characters to search.' });
         return;
       }
+
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
+      
       try {
         const results = await searchMovies(query);
         if (results) {
           dispatch({ type: 'SET_MOVIES', payload: results });
         } else {
           dispatch({ type: 'SET_MOVIES', payload: [] });
-          dispatch({ type: 'SET_ERROR', payload: 'No movies found or an error occurred.' });
         }
       } catch (err: any) {
-        dispatch({ type: 'SET_ERROR', payload: `Search failed: ${err.message}` });
+        dispatch({ type: 'SET_ERROR', payload: err.message || 'An unknown search error occurred.' });
       } finally {
         dispatch({ type: 'SET_LOADING', payload: false });
       }
-    }, 500), 
+    }, 500),
     []
   );
 
-  const fetchMovieDetailsForMovie = useCallback(async (imdbID: string) => {
 
-    if (state.movieDetails[imdbID] !== undefined && state.movieDetails[imdbID] !== null) {
-      return;
-    }
+  const fetchMovieDetailsForMovie = useCallback(async (imdbID: string) => {
     try {
       const details = await getMovieDetails(imdbID);
       if (details) {
         dispatch({ type: 'ADD_MOVIE_DETAILS', payload: details });
       } else {
-
-        dispatch({ type: 'ADD_MOVIE_DETAILS', payload: { imdbID, Response: 'False', Error: 'Details not found' } as OMDbMovieDetails });
+        dispatch({ type: 'ADD_MOVIE_DETAILS', payload: { 
+          imdbID, 
+          Response: 'False', 
+          Error: 'Details not found' 
+        } as OMDbMovieDetails });
       }
     } catch (err: any) {
       console.error(`Failed to fetch details for ${imdbID}:`, err);
-
-      dispatch({ type: 'ADD_MOVIE_DETAILS', payload: { imdbID, Response: 'False', Error: err.message } as OMDbMovieDetails });
+      dispatch({ type: 'ADD_MOVIE_DETAILS', payload: { 
+        imdbID, 
+        Response: 'False', 
+        Error: err.message 
+      } as OMDbMovieDetails });
     }
-  }, [state.movieDetails]); 
+  }, []);
 
   const fetchDynamicPrice = useCallback(async (imdbID: string, movieDetails: OMDbMovieDetails) => {
+    if (fetchingPricesRef.current.has(imdbID)) {
+      return;
+    }
+    
+    fetchingPricesRef.current.add(imdbID);
+    
     try {
       const now = new Date();
       const timeOfDay = now.getHours();
       const dayOfWeek = now.toLocaleString('en-US', { weekday: 'short' });
- 
       const moviePopularity = parseFloat(movieDetails.imdbRating || '0');
 
       const response = await fetch(`/api/dynamic-price?imdbID=${imdbID}&timeOfDay=${timeOfDay}&dayOfWeek=${dayOfWeek}&moviePopularity=${moviePopularity}`);
@@ -135,45 +159,91 @@ export const MovieProvider = ({ children }: { children: ReactNode }) => {
       dispatch({ type: 'SET_DYNAMIC_PRICE', payload: { imdbID, price: data } });
     } catch (err: any) {
       console.error(`Failed to fetch dynamic price for ${imdbID}:`, err);
+    } finally {
+      fetchingPricesRef.current.delete(imdbID);
     }
-  }, []); 
-
+  }, []);
 
   useEffect(() => {
     state.movies.forEach(movie => {
-
-      if (state.movieDetails[movie.imdbID] === undefined) {
-        fetchMovieDetailsForMovie(movie.imdbID);
+      const currentDetails = state.movieDetails[movie.imdbID];
+      const isAlreadyFetching = fetchingDetailsRef.current.has(movie.imdbID);
+      
+      if (currentDetails === undefined && !isAlreadyFetching) {
+        fetchingDetailsRef.current.add(movie.imdbID);
+        fetchMovieDetailsForMovie(movie.imdbID).finally(() => {
+          fetchingDetailsRef.current.delete(movie.imdbID);
+        });
       }
     });
-  }, [state.movies, state.movieDetails, fetchMovieDetailsForMovie]);
+  }, [state.movies, fetchMovieDetailsForMovie]);
 
   useEffect(() => {
-    
-    const moviesForFiltering: AppMovie[] = state.movies.map(movie => ({
+   
+    const moviesWithAllData: AppMovie[] = state.movies.map(movie => ({
       ...movie,
       details: state.movieDetails[movie.imdbID],
-
-      dynamicPrice: state.movies.find(m => m.imdbID === movie.imdbID)?.dynamicPrice,
+      dynamicPrice: movie.dynamicPrice,
     }));
 
-    const filtered = filterMoviesBySocialContext(
-      moviesForFiltering,
+   
+    const socialContextFiltered = filterMoviesBySocialContext(
+      moviesWithAllData,
       state.movieDetails,
       state.selectedSocialContext
     );
 
-    dispatch({ type: 'SET_FILTERED_MOVIES', payload: filtered });
+    const scoredMovies = socialContextFiltered.map(movie => {
+      const fuzzyScore = calculateFuzzyScore(state.searchQuery, movie.Title);
+      const overallScore = calculateOverallRecommendationScore(
+        movie,
+        movie.details,
+        {
+          selectedMood: state.selectedMood,
+          selectedSocialContext: state.selectedSocialContext,
+          userViewingHistory: state.userViewingHistory,
+          dynamicPriceInfo: movie.dynamicPrice,
+          fuzzyMatchScore: fuzzyScore,
+        }
+      );
 
-    filtered.forEach(movie => {
+      const moodMatchPercentage = movie.details
+        ? Math.round(calculateMoodMatchScore(movie.details, state.selectedMood) * 100)
+        : 0;
 
-      if (movie.details && !movie.dynamicPrice) {
-        fetchDynamicPrice(movie.imdbID, movie.details);
-      }
+      return {
+        ...movie,
+        score: overallScore,
+        fuzzyMatchScore: fuzzyScore,
+        moodMatchPercentage: moodMatchPercentage,
+      };
     });
 
-  }, [state.movies, state.movieDetails, state.selectedSocialContext, fetchDynamicPrice]);
 
+    const sortedAndScoredMovies = scoredMovies.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+    setFilteredAndScoredMovies(sortedAndScoredMovies);
+    dispatch({ type: 'SET_FILTERED_MOVIES', payload: sortedAndScoredMovies });
+  }, [
+    state.movies, 
+    state.movieDetails, 
+    state.selectedSocialContext, 
+    state.selectedMood, 
+    state.searchQuery, 
+    state.userViewingHistory
+  ]);
+
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      filteredAndScoredMovies.forEach(movie => {
+        if (movie.details && !movie.dynamicPrice && !fetchingPricesRef.current.has(movie.imdbID)) {
+          fetchDynamicPrice(movie.imdbID, movie.details);
+        }
+      });
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [filteredAndScoredMovies, fetchDynamicPrice]);
 
   const value = {
     state,

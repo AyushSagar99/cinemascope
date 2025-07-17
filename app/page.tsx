@@ -1,8 +1,9 @@
-
+// app/page.tsx
 'use client';
 
 import SearchBar from '@/components/searchbar';
 import SocialContextSelector from '@/components/socialselector';
+import MoodSelector from '@/components/moodselector'; // New: Import MoodSelector
 import MovieList from '@/components/movielist';
 
 export default function HomePage() {
@@ -14,6 +15,7 @@ export default function HomePage() {
 
       <SearchBar />
       <SocialContextSelector />
+      <MoodSelector /> 
       <MovieList />
     </main>
   );
