@@ -79,7 +79,6 @@ export default function MovieList() {
     );
   }
 
-  // No results for search
   if (state.searchQuery && state.filteredMovies.length === 0 && !state.loading) {
     return (
       <motion.div 

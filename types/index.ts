@@ -1,6 +1,4 @@
-// types/index.d.ts
 
-// --- OMDb API Types ---
 export interface OMDBSearchResult {
   Title: string;
   Year: string;
@@ -20,9 +18,9 @@ export interface OMDbMovieDetails {
   Title: string;
   Year: string;
   Rated: string;
-  Released: string; // e.g., "01 Jan 2016"
-  Runtime: string; // e.g., "148 min"
-  Genre: string; // e.g., "Action, Adventure, Sci-Fi"
+  Released: string; 
+  Runtime: string;
+  Genre: string; 
   Director: string;
   Writer: string;
   Actors: string;
@@ -33,7 +31,7 @@ export interface OMDbMovieDetails {
   Poster: string;
   Ratings: Array<{ Source: string; Value: string }>;
   Metascore: string;
-  imdbRating: string; // e.g., "8.7"
+  imdbRating: string; 
   imdbVotes: string;
   imdbID: string;
   Type: string;
