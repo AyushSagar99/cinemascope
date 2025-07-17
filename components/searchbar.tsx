@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useMovie } from '@/context/moviecontext';
+import { Search } from 'lucide-react';
 
 export default function SearchBar() {
   const { state, dispatch, searchMoviesByQuery } = useMovie();
@@ -19,7 +20,7 @@ export default function SearchBar() {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto mb-8">
+    <div className="w-full max-w-2xl mx-auto mb-8 relative">
       <input
         type="text"
         placeholder="Search for movies..."
@@ -27,6 +28,7 @@ export default function SearchBar() {
         onChange={handleChange}
         className="w-full p-3 rounded-full border border-gray-300 focus:outline-none  focus:ring-blue-500 text-black shadow-sm"
       />
+      <Search className='absolute right-4 top-3'/>
       {state.loading && <p className="text-center text-blue-500 mt-2">Searching...</p>}
       {state.error && <p className="text-center text-red-500 mt-2">{state.error}</p>}
     </div>
