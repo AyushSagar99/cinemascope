@@ -8,7 +8,7 @@ import { useMovie } from '@/context/moviecontext';
 export default function MovieList() {
   const { state } = useMovie();
 
- 
+  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -28,7 +28,7 @@ export default function MovieList() {
       opacity: 1, 
       y: 0,
       transition: {
-        type: "spring",
+        type: "spring" as const,
         stiffness: 200,
         damping: 20
       }
@@ -55,7 +55,7 @@ export default function MovieList() {
     );
   }
 
-
+  // Error state
   if (state.error) {
     return (
       <motion.div 
@@ -95,14 +95,14 @@ export default function MovieList() {
         </div>
         <p className="text-xl text-gray-600 font-medium">No movies found</p>
         <p className="text-gray-500 text-center">
-          No results for "<span className="font-semibold text-gray-700">{state.searchQuery}</span>"
+          No results for &quot;<span className="font-semibold text-gray-700">{state.searchQuery}</span>&quot;
         </p>
         <p className="text-sm text-gray-400">Try searching with different keywords</p>
       </motion.div>
     );
   }
 
-
+  // Initial empty state
   if (state.filteredMovies.length === 0 && !state.searchQuery && !state.loading) {
     return (
       <motion.div 
@@ -137,7 +137,7 @@ export default function MovieList() {
     );
   }
 
-
+  // Movie grid
   return (
     <div className="p-6">
       <motion.div 
@@ -167,7 +167,7 @@ export default function MovieList() {
         ))}
       </motion.div>
       
- 
+      {/* Results count */}
       {state.filteredMovies.length > 0 && (
         <motion.div 
           className="mt-8 text-center"
@@ -178,7 +178,7 @@ export default function MovieList() {
           <p className="text-gray-500 text-sm">
             Showing {state.filteredMovies.length} movie{state.filteredMovies.length !== 1 ? 's' : ''}
             {state.searchQuery && (
-              <span> for "<span className="font-semibold text-gray-700">{state.searchQuery}</span>"</span>
+              <span> for &quot;<span className="font-semibold text-gray-700">{state.searchQuery}</span>&quot;</span>
             )}
           </p>
         </motion.div>

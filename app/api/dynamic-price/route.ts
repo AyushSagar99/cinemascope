@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const dayOfWeek = searchParams.get('dayOfWeek'); // e.g., "Mon", "Tue", "Sat"
   const moviePopularity = parseFloat(searchParams.get('moviePopularity') || '0'); // Using imdbRating as proxy
 
-  let basePrice = 4.99; // Base rental price
+  const basePrice = 4.99; // Base rental price
   let rentalPrice = basePrice;
   let bestTimeToRentSuggestion = "Rent between 2 AM - 6 AM for lowest prices!";
 

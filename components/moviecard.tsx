@@ -61,7 +61,6 @@ export default function MovieCard({ movie }: MovieCardProps) {
         <img
           src={posterSrc}
           alt={movie.Title}
-          fill
           style={{ objectFit: 'cover' }}
           className="rounded-t-lg"
           onError={(e) => {

@@ -1,4 +1,3 @@
-// lib/omdb.ts
 import { OMDBSearchResponse, OMDbMovieDetails, OMDBSearchResult } from '@/types';
 
 const API_KEY = process.env.NEXT_PUBLIC_OMDB_API_KEY;
@@ -26,9 +25,10 @@ export async function searchMovies(query: string): Promise<OMDBSearchResult[] | 
       }
       return null;
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to fetch movies from OMDb:', error);
-    throw new Error(`Failed to fetch movies: ${error.message || 'Unknown error'}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to fetch movies: ${errorMessage}`);
   }
 }
 
@@ -47,7 +47,7 @@ export async function getMovieDetails(imdbID: string): Promise<OMDbMovieDetails 
       console.error('OMDb Details Error:', data.Error);
       return null;
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Failed to fetch movie details from OMDb:', error);
     return null;
   }
