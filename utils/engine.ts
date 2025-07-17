@@ -36,7 +36,7 @@ export function calculateMoodMatchScore(movieDetails: OMDbMovieDetails, mood: Mo
   const releaseYear = parseInt(movieDetails.Year, 10);
   const currentYear = new Date().getFullYear();
 
-  if (releaseYear >= currentYear - 1) {
+  if (releaseYear >= currentYear - 2) {
     score += 0.20;
   }
 
