@@ -9,6 +9,9 @@ export default function HomePage() {
   return (
     <div className='bg-[#FAFAF9] '>
     <main className="container mx-auto p-4 sm:p-6 lg:p-8">
+
+      <div className='bg-purple-600 w-[239px] h-[239px] blur-[800px] absolute left-0' />
+      <div className='bg-purple-600 w-[209px] h-[209px] blur-[800px] absolute right-0 bottom-0' />
       <h1 className="md:text-8xl text-2xl font-bold text-center  mb-5 font-serif">
         CinemaScope
       </h1>

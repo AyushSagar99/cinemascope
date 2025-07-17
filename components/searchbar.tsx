@@ -28,7 +28,7 @@ export default function SearchBar() {
         onChange={handleChange}
         className="w-full p-3 rounded-full border border-gray-300 focus:outline-none  focus:ring-blue-500 text-black shadow-sm"
       />
-      <Search className='absolute right-4 top-3'/>
+      <Search className='absolute text-gray-300 right-4 top-3'/>
       {state.loading && <p className="text-center text-blue-500 mt-2">Searching...</p>}
       {state.error && <p className="text-center text-red-500 mt-2">{state.error}</p>}
     </div>
